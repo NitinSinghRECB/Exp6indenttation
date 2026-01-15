@@ -13,8 +13,7 @@ function resetExperiment() {
 
 let holdTime = 0;          // seconds (user input)
 let holdProgress = 0;     // 0 → 1
-let isHolding = false;
-let holdPoints = [];
+
 //btn selector
 let dis2dbtn = document.querySelector('#dis2d');
 let indentbtn  = document.querySelector('#indent');
@@ -78,7 +77,15 @@ marker++;
 
 //graph code 
 let canvas, ctx;
+// ===================
+let animPhase = "idle";   // loading | holding | unloading
+let animT = 0;
 
+
+
+let holdLength = 0;
+
+//==================
 function initGraph() {
   canvas = document.getElementById("miniGraph");
   if (!canvas) return;
@@ -90,21 +97,18 @@ function initGraph() {
 const origin = { x: 40, y: 190 };
 const gWidth = 160;
 const gHeight = 140;
+let hmax = gWidth * 0.75;
+let Pmax = gHeight * 0.85;
+let hf   = gWidth * 0.18;
 
+let holdDelayDone = false;
 
-let loadProgress = 0;
-let unloadProgress = 0;
-let peakPoint = null;
-let loadingPoints = [];
-let unloadingPoints = [];
 const loadSteps = 120;     // smoothness
 const unloadSteps = 120;
 
-let stepIndex = 0;
-let holdStartTime = null;
-let holdY = null;
-let maxDepth = 0;
 
+
+let appliedForce = 0; // mN (user input)
 
 function drawBaseGraph() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -135,8 +139,128 @@ function drawBaseGraph() {
   ctx.fillText("Lo a d , P", 0, 0);
   ctx.restore();
 
-  ctx.fillText("Contact Point", origin.x - 10, origin.y + 35);
+ ctx.fillText(
+  `Load = ${appliedForce} mN | Hold = ${holdTime}s`,
+  origin.x - 5,
+  origin.y + 35
+);
+
 }
+
+function animateIndentationCurve() {
+  drawBaseGraph();
+
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  const loadExp = 2.0;
+  const unloadExp = 1.5;
+
+  // ---------- LOADING ----------
+  if (animPhase === "loading") {
+    animT += 0.01; // ~2 seconds
+
+    for (let i = 0; i <= animT * 100; i++) {
+      const t = i / 100;
+      const h = hmax * t;
+      const P = Pmax * Math.pow(t, loadExp);
+
+      const x = origin.x + h;
+      const y = origin.y - P;
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+
+    if (animT < 1) {
+      requestAnimationFrame(animateIndentationCurve);
+   } else {
+  // ⏸ delay before holding
+  setTimeout(() => {
+    animPhase = "holding";
+    animT = 0;
+    holdDelayDone = true;
+    requestAnimationFrame(animateIndentationCurve);
+  }, 500); // 500 ms delay
+}
+
+    return;
+  }
+
+  // ---------- HOLDING ----------
+  if (animPhase === "holding") {
+    animT += 0.01;
+setTimeout(() => {
+  animPhase = "unloading";
+  animT = 0;
+  requestAnimationFrame(animateIndentationCurve);
+}, holdTime * 1000); // holding time in seconds
+
+    // draw full loading
+    for (let i = 0; i <= 100; i++) {
+      const t = i / 100;
+      const h = hmax * t;
+      const P = Pmax * Math.pow(t, loadExp);
+      ctx.lineTo(origin.x + h, origin.y - P);
+    }
+
+    const hx =
+      origin.x + hmax + holdLength * Math.min(animT, 1);
+
+    ctx.lineTo(hx, origin.y - Pmax);
+    ctx.stroke();
+
+   if (animT < 1) {
+  requestAnimationFrame(animateIndentationCurve);
+} else {
+  // ✅ holding finished → wait for pointer up OR auto unload
+}
+    return;
+  }
+
+  // ---------- UNLOADING ----------
+  if (animPhase === "unloading") {
+    animT += 0.01;
+
+    // draw loading
+    for (let i = 0; i <= 100; i++) {
+      const t = i / 100;
+      const h = hmax * t;
+      const P = Pmax * Math.pow(t, loadExp);
+      ctx.lineTo(origin.x + h, origin.y - P);
+    }
+
+    // draw holding
+    ctx.lineTo(
+      origin.x + hmax + holdLength,
+      origin.y - Pmax
+    );
+
+    // draw unloading
+    for (let i = 0; i <= animT * 100; i++) {
+      const t = i / 100;
+      const h = (1 - t) * hmax + t * hf;
+      const P =
+        Pmax *
+        Math.pow((h - hf) / (hmax - hf), unloadExp);
+
+      ctx.lineTo(
+        origin.x + h + holdLength,
+        origin.y - P
+      );
+    }
+
+    ctx.stroke();
+
+    if (animT < 1) {
+      requestAnimationFrame(animateIndentationCurve);
+    }
+  }
+}
+
 
 //graph code 
 
@@ -148,252 +272,17 @@ function movedown() {
   if (!pointer) return;
 
   pointer.style.transform = "translateY(60px)";
-  drawLoadingCurve();
+animPhase = "loading";
+animT = 0;
+holdLength = Math.min(holdTime * 8, gWidth * 0.2);
+requestAnimationFrame(animateIndentationCurve);
 
+setTimeout(()=>{
+autoMovePointerUp()
+}, time*1000)
 }
 
 let pointerY = 0;
-
-function moveup(newSrc) {
-  btnarray[marker].style.display='block';
-marker++;
-  const pointer = document.querySelector('.pointer');
-  if (!pointer) return;
-
-  pointerY -= 5;
-  pointer.style.transition = "transform 0.6s linear";
-  pointer.style.transform = `translateY(${pointerY}px)`;
-
-  const img = document.getElementById("baseimage");
-  if (!img) return;
-
-  // Change SVG image correctly
-  img.setAttribute("href", newSrc);
-  img.setAttributeNS(
-    "http://www.w3.org/1999/xlink",
-    "xlink:href",
-    newSrc
-  );
-  drawUnloadingCurve();
-
-}
-
-
-
-function drawLoadingCurve() {
-  if (loadProgress >= 1) return;
-
-  const interval = setInterval(() => {
-    drawBaseGraph();
-
-    ctx.strokeStyle = "#c1121f";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    loadingPoints = [];
-
-    for (let t = 0; t <= loadProgress; t += 0.02) {
-      const x = origin.x + gWidth * t;
-      const y = origin.y - gHeight * Math.pow(t, 1.8);
-
-      loadingPoints.push({ x, y });
-
-      if (t === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-
-    ctx.stroke();
-    loadProgress += 0.02;
-
-    if (loadProgress >= 1) {
-  peakPoint = loadingPoints[loadingPoints.length - 1];
-  clearInterval(interval);
-
-  if (holdTime > 0) {
-    isHolding = true;
-    drawHoldingCurve();
-  } else {
-    drawUnloadingCurve();
-  }
-}
-
-  }, 95); // slow & smooth (loading)
-}
-
-function drawUnloadingCurve() {
-  if (!peakPoint || isHolding || unloadProgress >= 1) return;
-
-
-  const interval = setInterval(() => {
-    drawBaseGraph();
-
-    // redraw loading curve
-    ctx.strokeStyle = "#c1121f";
-    ctx.beginPath();
-    loadingPoints.forEach((p, i) => {
-      if (i === 0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
-    });
-    ctx.stroke();
-
-    // unloading curve
-    ctx.beginPath();
-    unloadingPoints = [];
-
-    for (let t = 0; t <= unloadProgress; t += 0.02) {
-      const x = peakPoint.x - gWidth * 0.35 * t;
-
-      // 🔥 This guarantees the declination meets X-axis
-      const y = peakPoint.y + (origin.y - peakPoint.y) * t;
-
-      unloadingPoints.push({ x, y });
-
-      if (t === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    if (unloadProgress >= 1) {
-      ctx.lineTo(
-        peakPoint.x - gWidth * 0.35,
-        origin.y
-      );
-    }
-
-    ctx.stroke();
-
-
-    // 🔵 draw slope S (tangent)
-    drawSlopeS();
-
-    ctx.fillStyle = "#000";
-    ctx.fillText(
-      "Max Depth, Max Load",
-      peakPoint.x - 70,
-      peakPoint.y - 10
-    );
-
-
-    unloadProgress += 0.05; // faster than loading
-
-    if (unloadProgress >= 1) {
-  unloadProgress = 1;   // clamp
-
-  // 🔴 FINAL FORCED DRAW
-  drawBaseGraph();
-
-  // redraw loading curve
-  ctx.strokeStyle = "#c1121f";
-  ctx.beginPath();
-  loadingPoints.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
-  ctx.stroke();
-
-  // 🔵 FINAL unloading curve TOUCHING X AXIS
-  ctx.beginPath();
-  ctx.moveTo(peakPoint.x, peakPoint.y);
-  ctx.lineTo(
-    peakPoint.x - gWidth * 0.35,
-    origin.y   // 🔥 EXACT X-AXIS
-  );
-  ctx.stroke();
-
-  clearInterval(interval);
-}
-
-  }, 30);
-}
-
-
-function drawSlopeS() {
-  if (unloadingPoints.length < 2) return;
-
-  // Use first two points near the peak
-  const p0 = unloadingPoints[0];
-  const p1 = unloadingPoints[1];
-
-  const dx = p1.x - p0.x;
-  const dy = p1.y - p0.y;
-
-  const len = Math.sqrt(dx * dx + dy * dy);
-  const ux = dx / len;
-  const uy = dy / len;
-
-  const L = 70; // visible length of slope line
-
-  ctx.setLineDash([6, 6]);
-  ctx.strokeStyle = "#2563eb";
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-  ctx.moveTo(p0.x - ux * L, p0.y - uy * L);
-  ctx.lineTo(p0.x + ux * L, p0.y + uy * L);
-  ctx.stroke();
-
-  ctx.setLineDash([]);
-
-  // Label S
-  ctx.fillStyle = "#2563eb";
-  ctx.fillText("S", p0.x + ux * 15, p0.y + uy * 15);
-}
-
-function drawHoldingCurve() {
-  holdProgress = 0;
-  holdPoints = [];
-
-  const totalHoldSteps = holdTime * 20; // smoothness (20 frames/sec)
-
-  const interval = setInterval(() => {
-    drawBaseGraph();
-
-    // redraw loading
-    ctx.strokeStyle = "#c1121f";
-    ctx.beginPath();
-    loadingPoints.forEach((p, i) => {
-      if (i === 0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
-    });
-    ctx.stroke();
-
-    // holding curve (horizontal)
-    ctx.strokeStyle = "#f59e0b";
-    ctx.beginPath();
-
-    const dx = gWidth * 0.02;
-    const x = peakPoint.x + dx * holdProgress;
-    const y = peakPoint.y;
-
-    holdPoints.push({ x, y });
-
-    if (holdPoints.length === 1) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-
-    ctx.stroke();
-
-    holdProgress++;
-
-    if (holdProgress >= totalHoldSteps) {
-      clearInterval(interval);
-      isHolding = false;
-      drawUnloadingCurve();
-      autoMovePointerUp();
-    }
-  }, 50);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -422,6 +311,10 @@ marker++;
       newSrc
     );
   }
+animPhase = "unloading";
+animT = 0;
+requestAnimationFrame(animateIndentationCurve);
+
 }
 
 
@@ -579,14 +472,17 @@ function validateInputs() {
 //   // later logic will go here
 // }
 
-
 function submitIndent() {
   holdTime = parseFloat(timeInput.value); // seconds
+  appliedForce = parseFloat(forceInput.value); // mN
+
   submitBtn.disabled = true;
-btnarray[marker].style.display='block';
-marker++;
-tableobs.style.display='block';
-  console.log("Holding Time:", holdTime);
+  btnarray[marker].style.display = 'block';
+  marker++;
+  tableobs.style.display = 'block';
+
+  console.log("Force:", appliedForce, "mN");
+  console.log("Holding Time:", holdTime, "s");
 }
 
 

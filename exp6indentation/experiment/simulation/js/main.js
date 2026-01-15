@@ -15,13 +15,25 @@ let holdTime = 0;          // seconds (user input)
 let holdProgress = 0;     // 0 → 1
 let isHolding = false;
 let holdPoints = [];
+//btn selector
+let dis2dbtn = document.querySelector('#dis2d');
+let indentbtn  = document.querySelector('#indent');
+let dis3btn = document.querySelector("#display3d");
+let formulabtn = document.querySelector('#formula');
+let marker =0
+let btnarray = [dis2dbtn ,indentbtn , dis3btn,formulabtn];
+btnarray.forEach(element => {
+  element.style.display ='none'
+});
 
-
+//array
 
 let heading = document.getElementById('heading');
 let svgContainer = document.querySelector('.svg-container');
 let pointer = document.querySelector('.pointer')
 function display2d() {
+  btnarray[marker].style.display='block';
+marker++;
   heading.innerText = '2D view'
   svgContainer.innerHTML = `        <div class="svg-base">
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080">
@@ -123,6 +135,8 @@ function drawBaseGraph() {
 
 
 function movedown() {
+  btnarray[marker].style.display='block';
+marker++;
   const pointer = document.querySelector('.pointer');
   if (!pointer) return;
 
@@ -152,7 +166,8 @@ function moveup(newSrc) {
     newSrc
   );
   drawUnloadingCurve();
-
+btnarray[marker].style.display='block';
+marker++;
 }
 
 
@@ -426,6 +441,8 @@ function display3d() {
     </div>
   `;
   heading.innerText = '3-Dimentional view'
+  btnarray[marker].style.display='block';
+marker++;
 }
 
 
@@ -534,7 +551,7 @@ function validateInputs() {
   const force = parseFloat(forceInput.value);
   const time = parseFloat(timeInput.value);
 
-  if (force >= 0.1 && force <= 10 && time > 0) {
+  if (force >= 0.1 && force <= 10 && time >= 0) {
     submitBtn.disabled = false;
   } else {
     submitBtn.disabled = true;
@@ -556,7 +573,8 @@ function validateInputs() {
 function submitIndent() {
   holdTime = parseFloat(timeInput.value); // seconds
   submitBtn.disabled = true;
-
+btnarray[marker].style.display='block';
+marker++;
   console.log("Holding Time:", holdTime);
 }
 

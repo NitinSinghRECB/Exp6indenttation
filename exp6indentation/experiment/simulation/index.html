@@ -55,16 +55,18 @@
       <input type="number" id="forceInput" step="0.1" min="0.1" max="10">
       <span>mN</span>
     </div>
+    <div class="range">Range: 0.1mN - 10mN</div>
   </div>
 
   <div class="input-row">
     <label>Holding Time</label>
     <div class="input-unit">
-      <input type="number" id="timeInput" step="1" min="1">
+      <input type="number" id="timeInput" step="1" min="0">
       <span>s</span>
     </div>
+    
+    <div class="range">Range: 0.1min - 10min</div>
   </div>
-
   <button id="submitIndent" class="primary" disabled onclick="submitIndent()">
     Submit
   </button>

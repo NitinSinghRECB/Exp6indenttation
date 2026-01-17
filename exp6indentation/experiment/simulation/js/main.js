@@ -43,8 +43,15 @@ let heading = document.getElementById('heading');
 let svgContainer = document.querySelector('.svg-container');
 let pointer = document.querySelector('.pointer')
 function display2d() {
-  btnarray[marker].style.display='block';
-marker++;
+    const holdingtime = parseFloat(timeInput.value);
+  setTimeout(() => {
+    btnarray[marker].style.display='block';
+  marker++;
+    
+}, 3000);
+setTimeout(() => {
+  document.querySelector('.graph').style.display ='block'
+}, 1500);
   heading.innerText = '2D view'
   svgContainer.innerHTML = `        <div class="svg-base">
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080">
@@ -187,7 +194,7 @@ function animateIndentationCurve(timestamp) {
 
   /* ================= LOADING ================= */
   if (animPhase === "loading") {
-    animT += 0.015;
+    animT += 0.030;
 
     for (let i = 0; i <= animT * 100; i++) {
       const t = i / 100;
@@ -322,10 +329,12 @@ function movedown() {
     holdLength = Math.min(holdTime * 8, gWidth * 0.2);
     requestAnimationFrame(animateIndentationCurve);
   }, 600); // same as pointer transition time
+  setTimeout(() => {
+    btnarray[marker].style.display ='block'
+    marker++;
+  }, 2500);
 }
 
-  btnarray[marker].style.display='block';
-marker++;
 
 let pointerY = 0;
 
@@ -365,7 +374,8 @@ requestAnimationFrame(animateIndentationCurve);
 
 
 function display3d() {
-  svgContainer.innerHTML = `
+setTimeout(() => {
+    svgContainer.innerHTML = `
     <div class="display3dview">
       <svg 
         xmlns="http://www.w3.org/2000/svg"
@@ -391,6 +401,8 @@ function display3d() {
       </svg>
     </div>
   `;
+}, 1500);
+svgContainer.style.transition="1s ease all"
   heading.innerText = '3-Dimentional view'
   btnarray[marker].style.display='block';
 marker++;
@@ -530,7 +542,7 @@ function submitIndent() {
   tableobs.style.display = 'block';
 
   console.log("Force:", appliedForce, "mN");
-  console.log("Holding Time:", holdTime, "s");
+  console.log("Holding Time:", holdTime, "min");
 }
 
 

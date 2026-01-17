@@ -230,7 +230,18 @@ svg image {
   height: 100%;
   right:20%;
 }
-
+.innersvg{
+  height: 85%;
+  width: 85%;
+  max-height: 800px;
+  left: 12%;
+  top: 10%;
+  position:relative;
+}
+.innersvg svg{
+  height: 100%;
+  width: 100%;
+}
 .display3dview svg {
     pointer-events: all;
   height: 110%;
